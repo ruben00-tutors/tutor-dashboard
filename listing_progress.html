@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tutor Positioning Dashboard — France</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f3; color: #1a1a1a; min-height: 100vh; }
+
+  /* Password screen */
+  #pw-screen { position: fixed; inset: 0; background: #f5f5f3; display: flex; align-items: center; justify-content: center; z-index: 9999; }
+  .pw-card { background: #fff; border: 1px solid #e5e5e5; border-radius: 14px; padding: 40px 36px; width: 340px; text-align: center; }
+  .pw-card h2 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .pw-card p { font-size: 13px; color: #888; margin-bottom: 24px; }
+  .pw-card input { width: 100%; padding: 10px 14px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; margin-bottom: 12px; }
+  .pw-card input:focus { border-color: #378ADD; }
+  .pw-card button { width: 100%; padding: 10px; background: #185FA5; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+  .pw-card button:hover { background: #0C447C; }
+  .pw-err { font-size: 12px; color: #993C1D; margin-top: 8px; display: none; }
+  .pw-icon { font-size: 32px; margin-bottom: 16px; }
+
+  /* App */
+  #app { display: none; }
+  .header { background: #fff; border-bottom: 1px solid #e5e5e5; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .header h1 { font-size: 17px; font-weight: 600; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .lock-btn { font-size: 12px; color: #888; background: none; border: 1px solid #e5e5e5; border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  .lock-btn:hover { background: #f5f5f3; }
+
+  /* Tabs */
+  .tabs { background: #fff; border-bottom: 1px solid #e5e5e5; padding: 0 24px; display: flex; gap: 0; }
+  .tab { padding: 12px 18px; font-size: 13px; font-weight: 500; color: #888; cursor: pointer; border-bottom: 2px solid transparent; transition: color .15s; white-space: nowrap; }
+  .tab:hover { color: #1a1a1a; }
+  .tab.active { color: #185FA5; border-bottom-color: #185FA5; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Layout */
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 20px 16px; }
+  .ctrl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 20px; background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; }
+  .ctrl label { font-size: 12px; color: #666; font-weight: 500; }
+  .ctrl select { padding: 7px 10px; border: 1px solid #ddd; border-radius: 7px; background: #fff; color: #1a1a1a; font-size: 13px; cursor: pointer; outline: none; }
+  .ctrl select:focus { border-color: #378ADD; }
+  .ctrl-sep { width: 1px; height: 24px; background: #e5e5e5; }
+  .count-pill { background: #e8f0fb; color: #185FA5; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .update-badge { background: #E1F5EE; color: #085041; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+
+  /* KPIs */
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+  .kpi { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 14px 16px; }
+  .kl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+  .kv { font-size: 22px; font-weight: 600; color: #1a1a1a; line-height: 1.1; }
+  .ks { font-size: 12px; margin-top: 3px; color: #888; }
+  .up { color: #0F6E56; } .dn { color: #993C1D; }
+
+  /* Charts */
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  @media(max-width: 640px) { .charts { grid-template-columns: 1fr; } }
+  .cbox { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; padding: 16px; }
+  .ctitle { font-size: 12px; font-weight: 600; color: #444; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .04em; }
+  .csub { font-size: 11px; color: #aaa; margin-bottom: 14px; }
+  .leg { display: flex; flex-wrap: wrap; gap: 14px; font-size: 11px; color: #666; margin-top: 10px; }
+  .legdot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 4px; vertical-align: middle; }
+
+  /* Table */
+  .tbox { background: #fff; border: 1px solid #e5e5e5; border-radius: 10px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { font-size: 11px; font-weight: 600; color: #666; text-align: left; padding: 10px 12px; border-bottom: 1px solid #e5e5e5; background: #fafafa; white-space: nowrap; text-transform: uppercase; letter-spacing: .04em; }
+  td { padding: 9px 12px; border-bottom: 1px solid #f0f0f0; color: #1a1a1a; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .bu { background: #E1F5EE; color: #085041; }
+  .bd { background: #FAECE7; color: #712B13; }
+  .bf { background: #f0f0f0; color: #666; }
+  .bar-bg { background: #f0f0f0; border-radius: 3px; height: 6px; width: 70px; display: inline-block; vertical-align: middle; }
+  .bar-fill { height: 6px; border-radius: 3px; background: #378ADD; display: block; }
+  .over { background: #185FA5; }
+  .empty { text-align: center; padding: 32px; color: #888; font-size: 13px; }
+
+  /* Glossary */
+  .glos-wrap { max-width: 860px; margin: 0 auto; padding: 28px 16px; }
+  .glos-wrap h2 { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .glos-wrap .gsub { font-size: 13px; color: #888; margin-bottom: 28px; }
+  .g-section { margin-bottom: 32px; }
+  .g-section h3 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: #185FA5; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e8f0fb; }
+  .g-row { display: grid; grid-template-columns: 200px 1fr; gap: 10px 20px; padding: 11px 0; border-bottom: 1px solid #f5f5f5; }
+  .g-row:last-child { border-bottom: none; }
+  .g-term { font-size: 13px; font-weight: 600; color: #1a1a1a; line-height: 1.4; }
+  .g-abbr { font-size: 11px; color: #999; font-weight: 400; display: block; margin-top: 2px; }
+  .g-tag { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10px; font-weight: 600; margin-top: 4px; }
+  .tag-pos { background: #e8f0fb; color: #185FA5; }
+  .tag-acq { background: #E1F5EE; color: #085041; }
+  .tag-dem { background: #faeeda; color: #633806; }
+  .tag-str { background: #f0f0f0; color: #555; }
+  .g-def { font-size: 13px; color: #444; line-height: 1.65; }
+  .g-ex { font-size: 12px; color: #999; margin-top: 5px; font-style: italic; border-left: 2px solid #e5e5e5; padding-left: 8px; }
+</style>
+</head>
+<body>
+
+<!-- Password screen -->
+<div id="pw-screen">
+  <div class="pw-card">
+    <div class="pw-icon">&#128274;</div>
+    <h2>Tutor Positioning Dashboard</h2>
+    <p>Enter the password to access this dashboard.</p>
+    <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')checkPw()">
+    <button onclick="checkPw()">Unlock dashboard</button>
+    <div class="pw-err" id="pw-err">Incorrect password. Please try again.</div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div class="header">
+    <h1>Tutor Positioning Dashboard — France</h1>
+    <div class="header-right">
+      <span class="update-badge">Updated May 2026</span>
+      <span style="font-size:12px;color:#888">Pos. 0 excluded &middot; Progress &gt; 0</span>
+      <button class="lock-btn" onclick="logout()">&#128274; Lock</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('dashboard',this)">&#128202; Dashboard</div>
+    <div class="tab" onclick="switchTab('glossary',this)">&#128218; Glossary</div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="tab-dashboard" class="tab-panel active">
+    <div class="wrap">
+
+      <div class="ctrl">
+        <label>Subject</label>
+        <select id="sf">
+          <option value="">All subjects</option>
+          <option>Tennis</option><option>Batterie</option><option>Natation</option>
+          <option>Violon</option><option>Chant</option><option>Piano</option>
+          <option>Accordéon</option><option>Danse</option><option>Cuisine</option>
+        </select>
+        <div class="ctrl-sep"></div>
+        <label>Progress</label>
+        <select id="pf">
+          <option value="">All</option>
+          <option value="over">Over target (≥100%)</option>
+          <option value="close">Close to target (≥70%)</option>
+          <option value="low">Behind target (&lt;50%)</option>
+        </select>
+        <div class="ctrl-sep"></div>
+        <label>Sort by</label>
+        <select id="so">
+          <option value="pos">Best current position</option>
+          <option value="prog">Progress %</option>
+          <option value="lr">Leads/tutor ratio</option>
+          <option value="posasc">Worst position (needs work)</option>
+        </select>
+        <div style="margin-left:auto"><span class="count-pill" id="countPill">30 listings</span></div>
+      </div>
+
+      <div class="kpis" id="kpis"></div>
+
+      <div class="charts">
+        <div class="cbox">
+          <div class="ctitle">Current position by listing</div>
+          <div class="csub">Lower number = better ranking &middot; Labels = current position value</div>
+          <div style="position:relative;height:270px;padding-top:16px">
+            <canvas id="c1" role="img" aria-label="Current position bar chart">Position data</canvas>
+          </div>
+          <div class="leg">
+            <span><span class="legdot" style="background:#185FA5"></span>Current position (May 2026)</span>
+          </div>
+        </div>
+        <div class="cbox">
+          <div class="ctitle">Progress vs target</div>
+          <div class="csub">Tutors acquired vs acquisition target &middot; Labels = tutors acquired</div>
+          <div style="position:relative;height:270px;padding-top:16px">
+            <canvas id="c2" role="img" aria-label="Progress vs target bar chart">Progress data</canvas>
+          </div>
+          <div class="leg">
+            <span><span class="legdot" style="background:#1D9E75"></span>Acquired</span>
+            <span><span class="legdot" style="background:#9FE1CB"></span>Target</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tbox">
+        <table>
+          <thead><tr>
+            <th>Subject</th>
+            <th>Location</th>
+            <th>Active tutors</th>
+            <th>L/T ratio</th>
+            <th>Position (May 2026)</th>
+            <th>Progress (acquired/target)</th>
+            <th>Status</th>
+          </tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Glossary -->
+  <div id="tab-glossary" class="tab-panel">
+    <div class="glos-wrap">
+      <h2>Dashboard Glossary</h2>
+      <p class="gsub">Definitions of every metric, column, and term used in this dashboard.</p>
+
+      <div class="g-section">
+        <h3>Positioning metrics</h3>
+        <div class="g-row">
+          <div><div class="g-term">Position (May 2026)</div><span class="g-tag tag-pos">Positioning</span></div>
+          <div>
+            <div class="g-def">The current organic search ranking of the tutor listing page on VosCours.fr for its target keyword. Position 1 is the top result — lower numbers are always better. Listings with position 0 are excluded from this dashboard as they have no measurable ranking.</div>
+            <div class="g-ex">A listing at position 5 appears on the first page of Google. Position 30+ is typically on page 3 or beyond — very low visibility.</div>
+          </div>
+        </div>
+        <div class="g-row">
+          <div><div class="g-term">Excluded (position 0)</div><span class="g-tag tag-pos">Positioning</span></div>
+          <div><div class="g-def">Listings showing position 0 have been removed from the analysis. This typically means the page is not yet indexed by Google, has no measurable ranking, or the listing does not exist as a standalone page.</div></div>
+        </div>
+      </div>
+
+      <div class="g-section">
+        <h3>Acquisition metrics</h3>
+        <div class="g-row">
+          <div><div class="g-term">Active tutors</div><span class="g-tag tag-acq">Acquisition</span></div>
+          <div><div class="g-def">The total number of active tutors currently registered and visible on the listing page. More tutors enrich the page content — the core lever of this campaign.</div></div>
+        </div>
+        <div class="g-row">
+          <div><div class="g-term">Progress (acquired/target)</div><span class="g-tag tag-acq">Acquisition</span></div>
+          <div>
+            <div class="g-def">New tutor conversions achieved since the campaign started, shown as "acquired / target" with a percentage. A dark blue bar indicates the listing has exceeded its target (≥100%).</div>
+            <div class="g-ex">101/85 (119%) means the listing exceeded its target — e.g. Piano national. 4/40 (10%) means it is far behind.</div>
+          </div>
+        </div>
+        <div class="g-row">
+          <div><div class="g-term">Over target</div><span class="g-tag tag-acq">Acquisition</span></div>
+          <div><div class="g-def">Listings where progress has exceeded the acquisition target (progress ≥ target). These are highlighted in the filter and the progress bar turns dark blue.</div></div>
+        </div>
+      </div>
+
+      <div class="g-section">
+        <h3>Demand metrics</h3>
+        <div class="g-row">
+          <div><div class="g-term">L/T Ratio <span class="g-abbr">Leads ÷ Tutors</span></div><span class="g-tag tag-dem">Demand</span></div>
+          <div>
+            <div class="g-def">The ratio of active student leads to active tutors on a listing. A high ratio signals strong unmet demand — these listings are highest priority for acquisition.</div>
+            <div class="g-ex">Accordéon Paris ville: L/T = 20.0 → 20 students per 1 tutor = critical shortage. Cuisine: L/T = 0.2 → very low demand relative to tutor supply.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="g-section">
+        <h3>Listing structure</h3>
+        <div class="g-row">
+          <div><div class="g-term">Location: "–"</div><span class="g-tag tag-str">Structure</span></div>
+          <div><div class="g-def">National-level listing for the subject, aggregating all tutors across France. Has its own independent search ranking.</div></div>
+        </div>
+        <div class="g-row">
+          <div><div class="g-term">Location: city name</div><span class="g-tag tag-str">Structure</span></div>
+          <div><div class="g-def">City-level listing ranking for local queries (e.g. "cours de tennis à Paris"). Tracked independently from the national page.</div></div>
+        </div>
+        <div class="g-row">
+          <div><div class="g-term">Status: In Progress</div><span class="g-tag tag-str">Structure</span></div>
+          <div><div class="g-def">Tutor acquisition campaign is active for this listing.</div></div>
+        </div>
+        <div class="g-row">
+          <div><div class="g-term">Status: Done</div><span class="g-tag tag-str">Structure</span></div>
+          <div><div class="g-def">Acquisition target reached — campaign complete.</div></div>
+        </div>
+        <div class="g-row">
+          <div><div class="g-term">Status: Not Started</div><span class="g-tag tag-str">Structure</span></div>
+          <div><div class="g-def">Listing identified as priority but acquisition has not yet begun.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+var PASS = "tutors_TM26";
+
+function checkPw(){
+  var v = document.getElementById("pw-input").value;
+  if(v === PASS){
+    document.getElementById("pw-screen").style.display = "none";
+    document.getElementById("app").style.display = "block";
+    sessionStorage.setItem("auth","1");
+    update();
+  } else {
+    document.getElementById("pw-err").style.display = "block";
+    document.getElementById("pw-input").value = "";
+    document.getElementById("pw-input").focus();
+  }
+}
+function logout(){
+  sessionStorage.removeItem("auth");
+  document.getElementById("pw-screen").style.display = "flex";
+  document.getElementById("app").style.display = "none";
+  document.getElementById("pw-input").value = "";
+  document.getElementById("pw-err").style.display = "none";
+}
+if(sessionStorage.getItem("auth") === "1"){
+  document.getElementById("pw-screen").style.display = "none";
+  document.getElementById("app").style.display = "block";
+}
+function switchTab(id, el){
+  document.querySelectorAll(".tab-panel").forEach(function(p){ p.classList.remove("active"); });
+  document.querySelectorAll(".tab").forEach(function(t){ t.classList.remove("active"); });
+  document.getElementById("tab-"+id).classList.add("active");
+  el.classList.add("active");
+}
+
+/* DATA — position 0 excluded, only rows with position > 0 */
+var DATA = [
+  {s:"Tennis",      l:"-",           t:40,  lr:3.25,  p3:13.7, pr:23,  tg:40,  status:"In Progress"},
+  {s:"Tennis",      l:"Toulouse",    t:3,   lr:6.67,  p3:16.3, pr:5,   tg:10,  status:"In Progress"},
+  {s:"Tennis",      l:"Lyon",        t:3,   lr:6.67,  p3:12.0, pr:3,   tg:10,  status:"In Progress"},
+  {s:"Tennis",      l:"Paris ville", t:12,  lr:4.17,  p3:9.1,  pr:15,  tg:20,  status:"In Progress"},
+  {s:"Batterie",    l:"-",           t:30,  lr:3.33,  p3:19.5, pr:10,  tg:20,  status:"In Progress"},
+  {s:"Batterie",    l:"Marseille",   t:2,   lr:10.0,  p3:5.3,  pr:4,   tg:5,   status:"In Progress"},
+  {s:"Batterie",    l:"Lyon",        t:3,   lr:10.0,  p3:21.2, pr:3,   tg:10,  status:"In Progress"},
+  {s:"Batterie",    l:"Nantes",      t:2,   lr:5.0,   p3:16.1, pr:3,   tg:5,   status:"In Progress"},
+  {s:"Natation",    l:"-",           t:46,  lr:5.0,   p3:15.0, pr:20,  tg:40,  status:"In Progress"},
+  {s:"Natation",    l:"Paris ville", t:3,   lr:10.0,  p3:11.9, pr:6,   tg:10,  status:"In Progress"},
+  {s:"Natation",    l:"Montpellier", t:3,   lr:10.0,  p3:14.4, pr:5,   tg:10,  status:"In Progress"},
+  {s:"Natation",    l:"Rennes",      t:2,   lr:5.0,   p3:14.6, pr:4,   tg:5,   status:"In Progress"},
+  {s:"Violon",      l:"-",           t:51,  lr:2.35,  p3:17.4, pr:5,   tg:10,  status:"In Progress"},
+  {s:"Violon",      l:"Toulouse",    t:2,   lr:10.0,  p3:24.7, pr:3,   tg:5,   status:"In Progress"},
+  {s:"Chant",       l:"-",           t:158, lr:1.96,  p3:22.7, pr:25,  tg:40,  status:"In Progress"},
+  {s:"Chant",       l:"Angers",      t:4,   lr:10.0,  p3:18.7, pr:6,   tg:10,  status:"In Progress"},
+  {s:"Chant",       l:"Bordeaux",    t:10,  lr:4.0,   p3:19.0, pr:13,  tg:20,  status:"In Progress"},
+  {s:"Piano",       l:"-",           t:259, lr:1.54,  p3:19.2, pr:101, tg:85,  status:"In Progress"},
+  {s:"Piano",       l:"Toulouse",    t:2,   lr:10.0,  p3:29.5, pr:14,  tg:10,  status:"In Progress"},
+  {s:"Piano",       l:"Marseille",   t:4,   lr:5.0,   p3:13.5, pr:9,   tg:15,  status:"In Progress"},
+  {s:"Piano",       l:"Grenoble",    t:2,   lr:5.0,   p3:38.7, pr:4,   tg:10,  status:"In Progress"},
+  {s:"Piano",       l:"Paris ville", t:18,  lr:2.78,  p3:30.6, pr:74,  tg:40,  status:"In Progress"},
+  {s:"Accordéon",   l:"-",           t:3,   lr:13.33, p3:21.1, pr:1,   tg:5,   status:"Not Started"},
+  {s:"Accordéon",   l:"Paris ville", t:1,   lr:20.0,  p3:17.7, pr:1,   tg:5,   status:"Not Started"},
+  {s:"Danse",       l:"-",           t:167, lr:1.32,  p3:10.0, pr:8,   tg:35,  status:"In Progress"},
+  {s:"Danse",       l:"Metz",        t:2,   lr:0.0,   p3:14.4, pr:2,   tg:5,   status:"In Progress"},
+  {s:"Danse",       l:"Caen",        t:1,   lr:0.0,   p3:34.0, pr:0,   tg:5,   status:"In Progress"},
+  {s:"Cuisine",     l:"-",           t:153, lr:0.20,  p3:11.2, pr:12,  tg:20,  status:"In Progress"},
+  {s:"Cuisine",     l:"Caen",        t:2,   lr:0.0,   p3:8.0,  pr:4,   tg:10,  status:"In Progress"},
+  {s:"Cuisine",     l:"La Rochelle", t:2,   lr:0.0,   p3:5.0,  pr:6,   tg:5,   status:"Done"}
+];
+
+function getFiltered(){
+  var sf = document.getElementById("sf").value;
+  var pf = document.getElementById("pf").value;
+  var so = document.getElementById("so").value;
+  var d = DATA.slice();
+  if(sf) d = d.filter(function(r){ return r.s === sf; });
+  if(pf === "over")  d = d.filter(function(r){ return r.pr >= r.tg; });
+  if(pf === "close") d = d.filter(function(r){ return r.pr/r.tg >= 0.7; });
+  if(pf === "low")   d = d.filter(function(r){ return r.pr/r.tg < 0.5; });
+  d = d.slice().sort(function(a,b){
+    if(so === "pos")    return a.p3 - b.p3;
+    if(so === "posasc") return b.p3 - a.p3;
+    if(so === "prog")   return (b.pr/b.tg) - (a.pr/a.tg);
+    if(so === "lr")     return b.lr - a.lr;
+    return 0;
+  });
+  return d;
+}
+
+var ch1 = null, ch2 = null;
+
+var labelPlugin = {
+  id: "customLabels",
+  afterDatasetsDraw: function(chart){
+    var ctx = chart.ctx;
+    var dsIndex = chart.data.datasets.length - 1;
+    var meta = chart.getDatasetMeta(dsIndex);
+    var ds = chart.data.datasets[dsIndex];
+    ctx.save();
+    ctx.font = "600 10px -apple-system,sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "bottom";
+    meta.data.forEach(function(bar, i){
+      var val = ds.data[i];
+      if(val === null || val === undefined || val === 0) return;
+      ctx.fillStyle = "#042C53";
+      ctx.fillText(val % 1 === 0 ? val : val.toFixed(1), bar.x, bar.y - 2);
+    });
+    ctx.restore();
+  }
+};
+
+function drawCharts(d){
+  var slice = d.slice(0, 10);
+  var labs = slice.map(function(r){ return (r.l === "-") ? r.s : r.s.slice(0,3)+"/"+r.l.slice(0,6); });
+
+  if(ch1){ ch1.destroy(); ch1 = null; }
+  if(ch2){ ch2.destroy(); ch2 = null; }
+
+  ch1 = new Chart(document.getElementById("c1"), {
+    type: "bar",
+    plugins: [labelPlugin],
+    data: { labels: labs, datasets: [
+      { label:"Position", data: slice.map(function(r){ return r.p3; }), backgroundColor: slice.map(function(r){ return r.p3 <= 10 ? "#0F6E56" : r.p3 <= 20 ? "#378ADD" : "#185FA5"; }) }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(c){ return "Position: "+c.parsed.y; } } }
+      },
+      scales: {
+        y: { reverse: true, title: { display: true, text: "Position (lower = better)", font:{size:11}, color:"#999" }, ticks:{font:{size:11}}, grid:{color:"rgba(0,0,0,.06)"}, min: 0 },
+        x: { ticks:{font:{size:10}, autoSkip:false, maxRotation:35}, grid:{display:false} }
+      }
+    }
+  });
+
+  ch2 = new Chart(document.getElementById("c2"), {
+    type: "bar",
+    plugins: [labelPlugin],
+    data: { labels: labs, datasets: [
+      { label:"Acquired", data: slice.map(function(r){ return r.pr; }), backgroundColor: slice.map(function(r){ return r.pr >= r.tg ? "#185FA5" : "#1D9E75"; }) },
+      { label:"Target",   data: slice.map(function(r){ return r.tg; }), backgroundColor:"#9FE1CB" }
+    ]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 18 } },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: function(c){ return c.dataset.label+": "+c.parsed.y+" tutors"; } } }
+      },
+      scales: {
+        y: { ticks:{font:{size:11}}, grid:{color:"rgba(0,0,0,.06)"} },
+        x: { ticks:{font:{size:10}, autoSkip:false, maxRotation:35}, grid:{display:false} }
+      }
+    }
+  });
+}
+
+function drawKPIs(d){
+  var over  = d.filter(function(r){ return r.pr >= r.tg; }).length;
+  var ap    = d.length ? Math.round(d.reduce(function(s,r){ return s + r.pr/r.tg*100; }, 0) / d.length) : 0;
+  var bl    = d.length ? d.reduce(function(b,r){ return r.lr > b.lr ? r : b; }, d[0]) : null;
+  var best  = d.length ? d.reduce(function(b,r){ return r.p3 < b.p3 ? r : b; }, d[0]) : null;
+  var worst = d.length ? d.reduce(function(b,r){ return r.p3 > b.p3 ? r : b; }, d[0]) : null;
+  document.getElementById("kpis").innerHTML =
+    '<div class="kpi"><div class="kl">Listings tracked</div><div class="kv">'+d.length+'</div><div class="ks">position &gt; 0</div></div>'+
+    '<div class="kpi"><div class="kl">Over target</div><div class="kv up">'+over+'</div><div class="ks">listings at 100%+</div></div>'+
+    '<div class="kpi"><div class="kl">Avg. progress</div><div class="kv">'+ap+'%</div><div class="ks">vs acquisition target</div></div>'+
+    '<div class="kpi"><div class="kl">Best position</div><div class="kv up">'+(best ? best.p3.toFixed(1) : "—")+'</div><div class="ks">'+(best ? best.s+" — "+best.l : "")+'</div></div>'+
+    '<div class="kpi"><div class="kl">Top demand L/T</div><div class="kv">'+(bl ? bl.lr.toFixed(1) : "—")+'</div><div class="ks">'+(bl ? bl.s+" — "+bl.l : "")+'</div></div>';
+  document.getElementById("countPill").textContent = d.length+" listings";
+}
+
+function drawTable(d){
+  if(!d.length){ document.getElementById("tb").innerHTML = '<tr><td colspan="7" class="empty">No listings match the current filters.</td></tr>'; return; }
+  document.getElementById("tb").innerHTML = d.map(function(r){
+    var pct = Math.round(r.pr / r.tg * 100);
+    var fillPct = Math.min(pct, 100);
+    var overTarget = r.pr >= r.tg;
+    var statusBadge = r.status === "Done" ? '<span class="badge bu">Done</span>' :
+                      r.status === "Not Started" ? '<span class="badge bf">Not Started</span>' :
+                      '<span class="badge" style="background:#e8f0fb;color:#185FA5">In Progress</span>';
+    var posColor = r.p3 <= 10 ? "#0F6E56" : r.p3 <= 20 ? "#185FA5" : "#993C1D";
+    return '<tr>'+
+      '<td style="font-weight:600">'+r.s+'</td>'+
+      '<td style="color:#666">'+r.l+'</td>'+
+      '<td>'+r.t+'</td>'+
+      '<td>'+r.lr.toFixed(1)+'</td>'+
+      '<td style="font-weight:700;color:'+posColor+'">'+r.p3.toFixed(1)+'</td>'+
+      '<td>'+
+        '<span class="bar-bg"><span class="bar-fill '+(overTarget?"over":"") +'" style="width:'+fillPct+'%"></span></span>'+
+        ' <span style="font-size:12px;font-weight:600;color:#1a1a1a">'+r.pr+'/'+r.tg+'</span>'+
+        ' <span style="font-size:11px;color:'+(overTarget?"#0F6E56":"#aaa")+'">('+pct+'%)</span>'+
+      '</td>'+
+      '<td>'+statusBadge+'</td>'+
+    '</tr>';
+  }).join("");
+}
+
+function update(){
+  if(document.getElementById("app").style.display === "none") return;
+  var d = getFiltered();
+  drawKPIs(d);
+  drawTable(d);
+  drawCharts(d);
+}
+
+document.getElementById("sf").addEventListener("change", update);
+document.getElementById("pf").addEventListener("change", update);
+document.getElementById("so").addEventListener("change", update);
+
+if(sessionStorage.getItem("auth") === "1") update();
+</script>
+</body>
+</html>
